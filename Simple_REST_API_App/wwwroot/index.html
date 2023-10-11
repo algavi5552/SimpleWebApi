@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>METANIT.COM</title>
+    <title>User List</title>
     <style>
         td {
             padding: 5px;
@@ -14,46 +14,46 @@
     </style>
 </head>
 <body>
-    <h2>Список пользователей</h2>
+    <h2>You are welcome</h2>
     <div>
         <input type="hidden" id="userId" />
         <p>
-            Имя:<br />
+            Name:<br />
             <input id="userName" />
         </p>
         <p>
-            Возраст:<br />
+            Age:<br />
             <input id="userAge" type="number" />
         </p>
         <p>
-            <button id="saveBtn">Сохранить</button>
-            <button id="resetBtn">Сбросить</button>
+            <button id="saveBtn">Save</button>
+            <button id="resetBtn">Cancel</button>
         </p>
     </div>
     <table>
-        <thead><tr><th>Имя</th><th>Возраст</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Age</th><th></th></tr></thead>
         <tbody>
         </tbody>
     </table>
 
     <script>
-    // Получение всех пользователей
+        // Get all users
         async function getUsers() {
-            // отправляет запрос и получаем ответ
+            // send the query and receive the answer
             const response = await fetch("/api/users", {
                 method: "GET",
                 headers: { "Accept": "application/json" }
             });
-            // если запрос прошел нормально
+            // if query was ok
             if (response.ok === true) {
-                // получаем данные
+                // get user data
                 const users = await response.json();
                 const rows = document.querySelector("tbody");
-                // добавляем полученные элементы в таблицу
+                // add received datas in the table
                 users.forEach(user => rows.append(row(user)));
             }
         }
-        // Получение одного пользователя
+        // Get single user data
         async function getUser(id) {
             const response = await fetch(`/api/users/${id}`, {
                 method: "GET",
@@ -66,12 +66,12 @@
                 document.getElementById("userAge").value = user.age;
             }
             else {
-                // если произошла ошибка, получаем сообщение об ошибке
+                // if error has happened, receive message
                 const error = await response.json();
-                console.log(error.message); // и выводим его на консоль
+                console.log(error.message); // and write it on the console
             }
         }
-        // Добавление пользователя
+        // Add user data
         async function createUser(userName, userAge) {
 
             const response = await fetch("api/users", {
@@ -91,7 +91,7 @@
                 console.log(error.message);
             }
         }
-        // Изменение пользователя
+        // Modify user data
         async function editUser(userId, userName, userAge) {
             const response = await fetch("api/users", {
                 method: "PUT",
@@ -111,7 +111,7 @@
                 console.log(error.message);
             }
         }
-        // Удаление пользователя
+        // Delete user data
         async function deleteUser(id) {
             const response = await fetch(`/api/users/${id}`, {
                 method: "DELETE",
@@ -127,13 +127,13 @@
             }
         }
 
-        // сброс данных формы после отправки
+        // Reset form after operation
         function reset() {
             document.getElementById("userId").value =
-            document.getElementById("userName").value =
-            document.getElementById("userAge").value = "";
+                document.getElementById("userName").value =
+                document.getElementById("userAge").value = "";
         }
-        // создание строки для таблицы
+        // create a new row for the table
         function row(user) {
 
             const tr = document.createElement("tr");
@@ -150,12 +150,12 @@
             const linksTd = document.createElement("td");
 
             const editLink = document.createElement("button");
-            editLink.append("Изменить");
-            editLink.addEventListener("click", async() => await getUser(user.id));
+            editLink.append("Modify");
+            editLink.addEventListener("click", async () => await getUser(user.id));
             linksTd.append(editLink);
 
             const removeLink = document.createElement("button");
-            removeLink.append("Удалить");
+            removeLink.append("Delete");
             removeLink.addEventListener("click", async () => await deleteUser(user.id));
 
             linksTd.append(removeLink);
@@ -163,8 +163,8 @@
 
             return tr;
         }
-        // сброс значений формы
-        document.getElementById("resetBtn").addEventListener("click", () =>  reset());
+        // reset the data from form
+        document.getElementById("resetBtn").addEventListener("click", () => reset());
 
         // отправка формы
         document.getElementById("saveBtn").addEventListener("click", async () => {
@@ -179,7 +179,7 @@
             reset();
         });
 
-        // загрузка пользователей
+        // load user datas
         getUsers();
     </script>
 </body>

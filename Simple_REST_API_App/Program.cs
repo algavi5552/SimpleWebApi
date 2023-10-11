@@ -1,171 +1,66 @@
-using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Simple_REST_API_App;
 
-// начальные данные
-List<Person> users = new List<Person>
-{
-    new() { Id = Guid.NewGuid().ToString(), Name = "Tom", Age = 37 },
-    new() { Id = Guid.NewGuid().ToString(), Name = "Bob", Age = 41 },
-    new() { Id = Guid.NewGuid().ToString(), Name = "Sam", Age = 24 }
-};
-
 var builder = WebApplication.CreateBuilder();
-
-// получаем строку подключени€ из файла конфигурации
-string connection = builder.Configuration.GetConnectionString("DefaultConnection");
-
-// добавл€ем контекст ApplicationContext в качестве сервиса в приложение
+//connection to db
+string connection = "Server=(localdb)\\mssqllocaldb;Database=applicationdb;Trusted_Connection=True;";
+//add ApplicationContext class to app services
 builder.Services.AddDbContext<ApplicationContext>(options => options.UseSqlServer(connection));
 
 var app = builder.Build();
 
-// получение данных
-app.MapGet("/fromDB", (ApplicationContext db) => db.Users.ToList());
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
-//app.Run(async (context) =>
-//{
-//    var response = context.Response;
-//    var request = context.Request;
-//    var path = request.Path;
-//    //string expressionForNumber = "^/api/users/([0-9]+)$";   // если id представл€ет число
+app.MapGet("/api/users", async (ApplicationContext db) => await db.Users.ToListAsync());
 
-//    // 2e752824-1657-4c7f-844b-6ec2e168e99c
-//    string expressionForGuid = @"^/api/users/\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$";
-//    if (path == "/api/users" && request.Method == "GET")
-//    {
-//        await GetAllPeople(response);
-//    }
-//    else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "GET")
-//    {
-//        // получаем id из адреса url
-//        string? id = path.Value?.Split("/")[3];
-//        await GetPerson(id, response);
-//    }
-//    else if (path == "/api/users" && request.Method == "POST")
-//    {
-//        await CreatePerson(response, request);
-//    }
-//    else if (path == "/api/users" && request.Method == "PUT")
-//    {
-//        await UpdatePerson(response, request);
-//    }
-//    else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "DELETE")
-//    {
-//        string? id = path.Value?.Split("/")[3];
-//        await DeletePerson(id, response);
-//    }
-//    else
-//    {
-//        response.ContentType = "text/html; charset=utf-8";
-//        await response.SendFileAsync("html/index.html");
-//    }
-//});
+app.MapGet("/api/users/{id:int}", async (int id, ApplicationContext db) =>
+{
+    // get user by id
+    User? user = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+
+    // if user not found, receive 404 status code and error message
+    if (user == null) return Results.NotFound(new { message = "User not found" });
+
+    // if user has been found, send his data
+    return Results.Json(user);
+});
+
+app.MapDelete("/api/users/{id:int}", async (int id, ApplicationContext db) =>
+{
+    // get user by id
+    User? user = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+
+    // if user not found, receive 404 status code and error message
+    if (user == null) return Results.NotFound(new { message = "User not found" });
+
+    // if user has been found, delete his data
+    db.Users.Remove(user);
+    await db.SaveChangesAsync();
+    return Results.Json(user);
+});
+
+app.MapPost("/api/users", async (User user, ApplicationContext db) =>
+{
+    // add user to array
+    await db.Users.AddAsync(user);
+    await db.SaveChangesAsync();
+    return user;
+});
+
+app.MapPut("/api/users", async (User userData, ApplicationContext db) =>
+{
+    // get user by id
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userData.Id);
+
+    // if user not found, receive 404 status code and error message
+    if (user == null) return Results.NotFound(new { message = "User not found" });
+
+    // if user has been found, modify his data and send back to client
+    user.Age = userData.Age;
+    user.Name = userData.Name;
+    await db.SaveChangesAsync();
+    return Results.Json(user);
+});
 
 app.Run();
-
-// получение всех пользователей
-async Task GetAllPeople(HttpResponse response)
-{
-    await response.WriteAsJsonAsync(users);
-}
-// получение одного пользовател€ по id
-async Task GetPerson(string? id, HttpResponse response)
-{
-    // получаем пользовател€ по id
-    Person? user = users.FirstOrDefault((u) => u.Id == id);
-    // если пользователь найден, отправл€ем его
-    if (user != null)
-        await response.WriteAsJsonAsync(user);
-    // если не найден, отправл€ем статусный код и сообщение об ошибке
-    else
-    {
-        response.StatusCode = 404;
-        await response.WriteAsJsonAsync(new { message = "ѕользователь не найден" });
-    }
-}
-
-async Task DeletePerson(string? id, HttpResponse response)
-{
-    // получаем пользовател€ по id
-    Person? user = users.FirstOrDefault((u) => u.Id == id);
-    // если пользователь найден, удал€ем его
-    if (user != null)
-    {
-        users.Remove(user);
-        await response.WriteAsJsonAsync(user);
-    }
-    // если не найден, отправл€ем статусный код и сообщение об ошибке
-    else
-    {
-        response.StatusCode = 404;
-        await response.WriteAsJsonAsync(new { message = "ѕользователь не найден" });
-    }
-}
-
-async Task CreatePerson(HttpResponse response, HttpRequest request)
-{
-    try
-    {
-        // получаем данные пользовател€
-        var user = await request.ReadFromJsonAsync<Person>();
-        if (user != null)
-        {
-            // устанавливаем id дл€ нового пользовател€
-            user.Id = Guid.NewGuid().ToString();
-            // добавл€ем пользовател€ в список
-            users.Add(user);
-            await response.WriteAsJsonAsync(user);
-        }
-        else
-        {
-            throw new Exception("Ќекорректные данные");
-        }
-    }
-    catch (Exception)
-    {
-        response.StatusCode = 400;
-        await response.WriteAsJsonAsync(new { message = "Ќекорректные данные" });
-    }
-}
-
-async Task UpdatePerson(HttpResponse response, HttpRequest request)
-{
-    try
-    {
-        // получаем данные пользовател€
-        Person? userData = await request.ReadFromJsonAsync<Person>();
-        if (userData != null)
-        {
-            // получаем пользовател€ по id
-            var user = users.FirstOrDefault(u => u.Id == userData.Id);
-            // если пользователь найден, измен€ем его данные и отправл€ем обратно клиенту
-            if (user != null)
-            {
-                user.Age = userData.Age;
-                user.Name = userData.Name;
-                await response.WriteAsJsonAsync(user);
-            }
-            else
-            {
-                response.StatusCode = 404;
-                await response.WriteAsJsonAsync(new { message = "ѕользователь не найден" });
-            }
-        }
-        else
-        {
-            throw new Exception("Ќекорректные данные");
-        }
-    }
-    catch (Exception)
-    {
-        response.StatusCode = 400;
-        await response.WriteAsJsonAsync(new { message = "Ќекорректные данные" });
-    }
-}
-public class Person
-{
-    public string Id { get; set; } = "";
-    public string Name { get; set; } = "";
-    public int Age { get; set; }
-}
